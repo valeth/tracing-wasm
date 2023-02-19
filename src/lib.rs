@@ -15,6 +15,7 @@ use wasm_bindgen::prelude::*;
 extern "C" {
     #[wasm_bindgen(js_namespace = performance)]
     fn mark(a: &str);
+
     #[wasm_bindgen(catch, js_namespace = performance)]
     fn measure(name: String, startMark: String) -> Result<(), JsValue>;
     #[wasm_bindgen(js_namespace = console, js_name = log)]
@@ -25,6 +26,21 @@ extern "C" {
     fn log3(message1: &str, message2: &str, message3: &str);
     #[wasm_bindgen(js_namespace = console, js_name = log)]
     fn log4(message1: String, message2: &str, message3: &str, message4: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = error)]
+    fn error1(message: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = warn)]
+    fn warn1(message: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = info)]
+    fn info1(message: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = debug)]
+    fn debug1(message: &str);
+
+    #[wasm_bindgen(js_namespace = console, js_name = trace)]
+    fn trace1(message: &str);
 }
 
 #[cfg(test)]
@@ -187,7 +203,7 @@ impl Default for WASMLayerConfigBuilder {
         WASMLayerConfigBuilder {
             report_logs_in_timings: true,
             report_logs_in_console: true,
-            use_console_color: true,
+            use_console_color: false,
             max_level: tracing::Level::TRACE,
         }
     }
@@ -206,7 +222,7 @@ impl core::default::Default for WASMLayerConfig {
         WASMLayerConfig {
             report_logs_in_timings: true,
             report_logs_in_console: true,
-            use_console_color: true,
+            use_console_color: false,
             max_level: tracing::Level::TRACE,
         }
     }
@@ -327,13 +343,14 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for WASMLayer {
                         "color: inherit",
                     );
                 } else {
-                    log1(format!(
-                        "{} {}{} {}",
-                        level,
-                        origin,
-                        thread_display_suffix(),
-                        recorder,
-                    ));
+                    let fmt = format!("{}: {}", origin, recorder);
+                    match *level {
+                        tracing::Level::TRACE => trace1(&fmt),
+                        tracing::Level::DEBUG => debug1(&fmt),
+                        tracing::Level::INFO => info1(&fmt),
+                        tracing::Level::WARN => warn1(&fmt),
+                        tracing::Level::ERROR => error1(&fmt),
+                    }
                 }
             }
             if self.config.report_logs_in_timings {
